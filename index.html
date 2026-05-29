@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PlantaScan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --green-deep: #1a2e1a;
+    --green-mid: #2d5a27;
+    --green-light: #4a8c3f;
+    --green-accent: #7bc67e;
+    --cream: #f5f0e8;
+    --warning: #e8a838;
+    --error: #c94f4f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--green-deep);
+    color: var(--cream);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 420px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--green-deep);
+    position: relative;
+  }
+
+  .app::before {
+    content: '';
+    position: fixed;
+    top: -100px;
+    right: -100px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(74,140,63,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .header {
+    padding: 48px 24px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo { display: flex; align-items: center; gap: 10px; }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--green-light);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px; font-weight: 700;
+    color: var(--cream); letter-spacing: -0.5px;
+  }
+  .logo-text span { color: var(--green-accent); }
+
+  .upload-section {
+    padding: 8px 24px 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .upload-zone {
+    background: rgba(255,255,255,0.04);
+    border: 2px dashed rgba(123,198,126,0.3);
+    border-radius: 24px;
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+  }
+
+  .upload-zone:hover {
+    background: rgba(123,198,126,0.08);
+    border-color: var(--green-accent);
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0;
+    cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .upload-icon { font-size: 48px; margin-bottom: 12px; display: block; }
+  .upload-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--cream); margin-bottom: 6px; }
+  .upload-sub { font-size: 13px; color: var(--green-accent); opacity: 0.7; }
+
+  .preview-zone { display: none; border-radius: 24px; overflow: hidden; position: relative; }
+  .preview-zone.active { display: block; }
+  .preview-zone img { width: 100%; height: 260px; object-fit: cover; display: block; }
+
+  .preview-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 16px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    display: flex; justify-content: flex-end;
+  }
+
+  .preview-change {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white; padding: 8px 14px; border-radius: 20px;
+    font-size: 12px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; position: relative;
+  }
+  .preview-change input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  .analyze-btn {
+    background: linear-gradient(135deg, var(--green-light), var(--green-mid));
+    color: white; border: none; padding: 18px 24px; border-radius: 18px;
+    font-size: 16px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: all 0.3s;
+    box-shadow: 0 8px 24px rgba(74,140,63,0.3);
+  }
+  .analyze-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(74,140,63,0.4); }
+  .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.8s linear infinite; display: none;
+  }
+  .analyze-btn.loading .spinner { display: block; }
+  .analyze-btn.loading .btn-text { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .results { display: none; flex-direction: column; gap: 14px; }
+  .results.active { display: flex; }
+
+  .result-header {
+    background: linear-gradient(135deg, rgba(74,140,63,0.2), rgba(45,90,39,0.2));
+    border: 1px solid rgba(123,198,126,0.2);
+    border-radius: 20px; padding: 20px;
+  }
+
+  .plant-name { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--cream); margin-bottom: 4px; }
+  .plant-scientific { font-size: 13px; color: var(--green-accent); font-style: italic; margin-bottom: 14px; opacity: 0.8; }
+
+  .health-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  }
+  .health-badge.healthy { background: rgba(123,198,126,0.15); color: var(--green-accent); border: 1px solid rgba(123,198,126,0.3); }
+  .health-badge.warning { background: rgba(232,168,56,0.15); color: var(--warning); border: 1px solid rgba(232,168,56,0.3); }
+  .health-badge.sick { background: rgba(201,79,79,0.15); color: var(--error); border: 1px solid rgba(201,79,79,0.3); }
+
+  .result-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px; padding: 18px;
+  }
+
+  .card-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--green-accent); margin-bottom: 10px; opacity: 0.7; }
+  .card-content { font-size: 14px; color: var(--cream); line-height: 1.6; opacity: 0.9; }
+
+  .care-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .care-item { background: rgba(255,255,255,0.04); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .care-label { font-size: 11px; color: var(--green-accent); opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+  .care-value { font-size: 13px; color: var(--cream); }
+
+  .error-msg {
+    display: none;
+    background: rgba(201,79,79,0.1); border: 1px solid rgba(201,79,79,0.3);
+    border-radius: 14px; padding: 16px; color: #e88888; font-size: 14px; line-height: 1.5;
+  }
+  .error-msg.active { display: block; }
+
+  .new-scan-btn {
+    background: transparent; border: 1px solid rgba(123,198,126,0.3);
+    color: var(--green-accent); padding: 14px; border-radius: 14px;
+    font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    text-align: center; transition: all 0.2s; margin-top: 4px;
+  }
+  .new-scan-btn:hover { background: rgba(123,198,126,0.08); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🌿</div>
+      <div class="logo-text">Planta<span>Scan</span></div>
+    </div>
+  </div>
+
+  <div class="upload-section">
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" accept="image/*" capture="environment" id="fileInput" onchange="handleFile(event)">
+      <span class="upload-icon">📸</span>
+      <div class="upload-title">Fotografía tu planta</div>
+      <div class="upload-sub">Toca para abrir la cámara o elegir foto</div>
+    </div>
+
+    <div class="preview-zone" id="previewZone">
+      <img id="previewImg" src="" alt="Planta">
+      <div class="preview-overlay">
+        <div class="preview-change">
+          📷 Cambiar foto
+          <input type="file" accept="image/*" capture="environment" onchange="handleFile(event)">
+        </div>
+      </div>
+    </div>
+
+    <button class="analyze-btn" id="analyzeBtn" onclick="analyzePlant()" disabled>
+      <div class="spinner"></div>
+      <span class="btn-text">🔍 Identificar planta</span>
+    </button>
+
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="results" id="results"></div>
+    <button class="new-scan-btn" id="newScanBtn" style="display:none" onclick="resetApp()">+ Analizar otra planta</button>
+  </div>
+</div>
+
+<script>
+  let currentImageBase64 = null;
+  let currentMediaType = 'image/jpeg';
+
+  function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    currentMediaType = file.type || 'image/jpeg';
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      currentImageBase64 = dataUrl.split(',')[1];
+      document.getElementById('previewImg').src = dataUrl;
+      document.getElementById('uploadZone').style.display = 'none';
+      document.getElementById('previewZone').classList.add('active');
+      document.getElementById('results').classList.remove('active');
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('errorMsg').classList.remove('active');
+      document.getElementById('newScanBtn').style.display = 'none';
+      document.getElementById('analyzeBtn').disabled = false;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function analyzePlant() {
+    if (!currentImageBase64) return;
+    const btn = document.getElementById('analyzeBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    document.getElementById('errorMsg').classList.remove('active');
+    document.getElementById('results').classList.remove('active');
+
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: currentImageBase64, mediaType: currentMediaType })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Error al analizar');
+      showResults(data);
+    } catch (err) {
+      const errEl = document.getElementById('errorMsg');
+      errEl.textContent = '❌ ' + (err.message || 'Error al analizar. Inténtalo de nuevo.');
+      errEl.classList.add('active');
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  function showResults(plant) {
+    const healthClass = plant.estado_salud === 'saludable' ? 'healthy' : plant.estado_salud === 'necesita_atención' ? 'warning' : 'sick';
+    const healthIcon = plant.estado_salud === 'saludable' ? '✅' : plant.estado_salud === 'necesita_atención' ? '⚠️' : '🚨';
+    const healthText = plant.estado_salud === 'saludable' ? 'Planta saludable' : plant.estado_salud === 'necesita_atención' ? 'Necesita atención' : 'Planta enferma';
+
+    document.getElementById('results').innerHTML = `
+      <div class="result-header">
+        <div class="plant-name">${plant.nombre_comun}</div>
+        <div class="plant-scientific">${plant.nombre_cientifico}</div>
+        <div class="health-badge ${healthClass}">${healthIcon} ${healthText}</div>
+      </div>
+      <div class="result-card">
+        <div class="card-title">Descripción</div>
+        <div class="card-content">${plant.descripcion}</div>
+      </div>
+      ${plant.problemas !== 'Ninguno detectado' ? `
+      <div class="result-card">
+        <div class="card-title">⚠️ Problemas detectados</div>
+        <div class="card-content">${plant.problemas}</div>
+      </div>
+      <div class="result-card">
+        <div class="card-title">💡 Soluciones</div>
+        <div class="card-content">${plant.soluciones}</div>
+      </div>` : `
+      <div class="result-card">
+        <div class="card-title">💡 Recomendaciones</div>
+        <div class="card-content">${plant.soluciones}</div>
+      </div>`}
+      <div class="result-card">
+        <div class="card-title">Guía de cuidados</div>
+        <div class="care-grid">
+          <div class="care-item"><div class="care-label">💧 Riego</div><div class="care-value">${plant.riego}</div></div>
+          <div class="care-item"><div class="care-label">☀️ Luz</div><div class="care-value">${plant.luz}</div></div>
+          <div class="care-item"><div class="care-label">🌡️ Temperatura</div><div class="care-value">${plant.temperatura}</div></div>
+          <div class="care-item"><div class="care-label">🪴 Sustrato</div><div class="care-value">${plant.sustrato}</div></div>
+        </div>
+      </div>`;
+
+    document.getElementById('results').classList.add('active');
+    document.getElementById('newScanBtn').style.display = 'block';
+  }
+
+  function resetApp() {
+    currentImageBase64 = null;
+    document.getElementById('uploadZone').style.display = 'block';
+    document.getElementById('previewZone').classList.remove('active');
+    document.getElementById('results').classList.remove('active');
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('errorMsg').classList.remove('active');
+    document.getElementById('newScanBtn').style.display = 'none';
+    document.getElementById('fileInput').value = '';
+    document.getElementById('analyzeBtn').disabled = true;
+  }
+</script>
+</body>
+</html>
